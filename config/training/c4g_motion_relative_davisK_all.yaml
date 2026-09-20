@@ -1,0 +1,25 @@
+# @package _global_
+
+# Time-embedding ablation of c4g_motion_davisK_all: identical recipe (data mix, motion /
+# tracking / depth losses, lr, C3G gaussian-head init), only the timestamp embedding changes
+# from target_1 / period 10000 to the v4-3 scheme:
+#   rel = t - target in dataset index units (no normalization), sinusoid period 100.
+# Compare against motion_davisK_all_45k at step 20k (that run is stopped at 20k; lr is constant
+# after the 1k warm-up, so max_steps does not change the trajectory up to 20k).
+# Evaluate with normalize_type=relative (not stored in the checkpoint).
+
+defaults:
+  - c4g_motion_davisK_all
+  - _self_
+
+wandb:
+  name: motion_relative_p100_davisK_all_20k
+  tags: [all, kubric, spring, egoexo4d_mono, re10k, vggt, dynamicmask, davisK, motion, flow3d, static_anchor, relative_p100]
+
+model:
+  encoder:
+    normalize_type: relative
+    sinusoidal_period: 100
+
+trainer:
+  max_steps: 20000

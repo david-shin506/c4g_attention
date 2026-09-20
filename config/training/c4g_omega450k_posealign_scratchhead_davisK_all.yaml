@@ -1,0 +1,120 @@
+# @package _global_
+
+# C4G Gaussian/time head trained from scratch on top of the exact C3G 450k
+# Omega backbone, using C3G-style pose canonicalization and scene scaling.
+defaults:
+  - /dataset@_group_.kubric: kubric
+  - /dataset@_group_.spring: spring
+  - /dataset@_group_.egoexo4d_mono: egoexo4d_mono
+  - /dataset@_group_.re10k: re10k
+  - override /model/encoder: vggt
+  - override /model/encoder/backbone: vggt_omega
+  - override /loss: [dynamicmask, lpips]
+
+wandb:
+  name: intrinsic_test_davisK_omega450k_posealign_scratchhead_all_45k_4gpu
+  mode: online
+  tags: [all, kubric, spring, egoexo4d_mono, re10k, vggt_omega, omega_pose, scratch_head, dynamicmask, track]
+
+force_davis_intrinsics: true
+
+model:
+  encoder:
+    pretrained_weights: ""
+    backbone_pretrained_weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/intrinsic_test/C4G/pretrained_weights/c3g_omega_epoch6_step450000_backbone.pt
+    input_mean: [0.0, 0.0, 0.0]
+    input_std: [1.0, 1.0, 1.0]
+    timestamp_embedding: true
+    timestamp_embedding_type: sinusoidal
+    sinusoidal_embedding_dim: 256
+    sinusoidal_period: 10000
+    normalize_type: target_1
+    gradient_checkpoint: true
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: 1000
+
+dataset:
+  kubric:
+    make_baseline_1: false
+    relative_pose: true
+    rescale_to_1cube: false
+    num_temporal_frames: 32
+    num_context_timestamps: 6
+    view_sampler:
+      num_context_views: 10
+      warm_up_steps: 37500
+      initial_gap: 2
+      gap: 6
+  spring:
+    make_baseline_1: false
+    relative_pose: true
+    different_time: true
+    relative_time: false
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+      initial_gap: 2
+      gap: 2
+  egoexo4d_mono:
+    make_baseline_1: false
+    relative_pose: true
+    frame_stride: 10
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+      initial_gap: 2
+      gap: 2
+  re10k:
+    make_baseline_1: false
+    relative_pose: true
+    fake_time_labels: false
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+      min_distance_between_context_views: 45
+      max_distance_between_context_views: 90
+      min_distance_to_context_views: 0
+      initial_min_distance_between_context_views: 25
+      initial_max_distance_between_context_views: 25
+
+optimizer:
+  lr: 1e-5
+  warm_up_steps: 1000
+  backbone_lr_multiplier: 0.01
+  scratch_encoder_head_lr: true
+
+data_loader:
+  train:
+    batch_size: 1
+    num_workers: 16
+    persistent_workers: true
+
+train:
+  context_view_loss: true
+  reproj_model: moge
+  depth_supervision_mode: ssi
+  depth_loss: 0.0
+  normal_loss: 0.0
+  tracking_consistency_loss: 1e-1
+  omega_pose_normalizer:
+    enabled: true
+    weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/intrinsic_test/C3G/pretrained_weights/vggt_omega_1b_512.pt
+    scale_min: 1e-3
+    scale_max: 1e3
+    baseline_epsilon: 1e-6
+
+trainer:
+  max_steps: 45000
+  val_check_interval: 500
+  accumulate_grad_batches: 1
+
+checkpointing:
+  load: null
+  every_n_train_steps: 1000
+  save_top_k: 1
+  save_weights_only: false

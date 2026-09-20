@@ -1,0 +1,33 @@
+# @package _global_
+
+# Motion losses v2 on the c4g_motion_davisK_all recipe. v1 froze every Gaussian (moving pairs followed
+# 13-17% of the GT flow with ~0 direction agreement, versus 60-80% without motion losses;
+# run_logs/diag_gaussian_motion_535617.json): the static anchor and the pooled flow3d term both push
+# toward zero motion on the many still tokens, while moving pairs sat in the Huber linear regime.
+# v2 drops those two terms and supervises 3D flow as two separately averaged, O(1)-normalised terms:
+#   flow3d_move   relative end-point error on pairs whose GT flow exceeds 0.005 scene scale (0.5 at a frozen Gaussian)
+#   flow3d_still  end-point error / 0.005 on the remaining pairs (keeps static regions from jittering)
+# flow2d is kept as in v1. Watch motion/flow3d_move_ratio and motion/flow3d_move_cos per dataset in wandb.
+
+defaults:
+  - c4g_motion_davisK_all
+  - _self_
+
+wandb:
+  name: motion_v2_davisK_all_20k
+  tags: [all, kubric, spring, egoexo4d_mono, re10k, vggt, dynamicmask, davisK, motion_v2, flow3d_split]
+
+train:
+  motion:
+    flow3d_weight: 0.0
+    static_weight: 0.0
+    flow3d_move_weight: 0.02
+    flow3d_still_weight: 0.005
+    flow3d_move_rel: 0.005
+    flow3d_move_dataset_weights:
+      egoexo4d_mono: 0.3
+    flow3d_still_dataset_weights:
+      egoexo4d_mono: 0.3
+
+trainer:
+  max_steps: 20000

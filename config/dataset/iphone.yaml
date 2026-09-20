@@ -1,0 +1,19 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: iphone
+roots: [/music-3d-shared-disk/dataset/iphone/original_data]
+
+input_image_shape: [224, 224]
+original_image_shape: [960, 720]
+cameras_are_circular: false
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 100.0
+make_baseline_1: true
+context_cameras: null
+target_cameras: null
+num_target_frames: null
+max_temporal: 51

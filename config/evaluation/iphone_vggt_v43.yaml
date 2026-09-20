@@ -1,0 +1,51 @@
+# @package _global_
+
+# iPhone evaluation for the VGGT v4-3 baseline, run through the same C4G test path as
+# iphone_omega.yaml so the two are directly comparable.
+defaults:
+  - /dataset@_group_.iphone: iphone
+  - override /model/encoder: vggt
+  - override /model/encoder/backbone: vggt_multi
+  - override /loss: [dynamicmask, lpips]
+
+wandb:
+  name: hs_iphone_vggt_v43
+  mode: disabled
+  tags: [iphone, evaluation, vggt_multi, baseline]
+
+force_davis_intrinsics: true
+
+model:
+  encoder:
+    pretrained_weights: ""
+    timestamp_embedding: true
+    timestamp_embedding_type: sinusoidal
+    sinusoidal_embedding_dim: 256
+    sinusoidal_period: 100
+    normalize_type: relative
+    gradient_checkpoint: false
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: 1000
+
+dataset:
+  iphone:
+    # Same protocol as the July hs_iphone eval (hs_iphone_v4-4.sh).
+    target_cameras: [1]
+    num_target_frames: 64
+    max_temporal: 64
+    view_sampler:
+      num_context_views: 3
+
+data_loader:
+  test:
+    num_workers: 4
+    batch_size: 1
+
+test:
+  compute_scores: true
+  save_image: false
+  save_compare: true
+  align_pose: true
+

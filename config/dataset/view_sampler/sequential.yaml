@@ -1,0 +1,4 @@
+name: sequential
+
+num_context_views: 8
+gap: 6

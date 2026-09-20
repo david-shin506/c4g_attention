@@ -1,0 +1,69 @@
+# @package _global_
+
+# iPhone evaluation for the Omega-backbone checkpoints
+# (c4g_omega450k_posealign_v2_davisK_all).  The encoder settings mirror that
+# training config so the checkpoint loads strictly, and the Omega pose/scale
+# normalizer stays enabled because test_step relies on it to put the GT poses
+# and the near/far planes into the Omega units the model was trained in.
+defaults:
+  - /dataset@_group_.iphone: iphone
+  - override /model/encoder: vggt
+  - override /model/encoder/backbone: vggt_omega
+  - override /loss: [dynamicmask, lpips]
+
+wandb:
+  name: hs_iphone_omega
+  mode: disabled
+  tags: [iphone, evaluation, vggt_omega]
+
+force_davis_intrinsics: true
+
+model:
+  encoder:
+    # Weights come from checkpointing.load; skip the pretrained files.
+    pretrained_weights: ""
+    backbone_pretrained_weights: ""
+    input_mean: [0.0, 0.0, 0.0]
+    input_std: [1.0, 1.0, 1.0]
+    timestamp_embedding: true
+    timestamp_embedding_type: sinusoidal
+    sinusoidal_embedding_dim: 256
+    sinusoidal_period: 10000
+    normalize_type: target_1
+    gradient_checkpoint: false
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: 1000
+
+dataset:
+  iphone:
+    # Same protocol as the July hs_iphone eval (hs_iphone_v4-4.sh).
+    target_cameras: [1]
+    num_target_frames: 64
+    max_temporal: 64
+    view_sampler:
+      num_context_views: 3
+
+data_loader:
+  test:
+    num_workers: 4
+    batch_size: 1
+
+test:
+  compute_scores: true
+  save_image: false
+  save_compare: true
+  align_pose: true
+
+train:
+  omega_pose_normalizer:
+    enabled: true
+    weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/intrinsic_test/C3G/pretrained_weights/vggt_omega_1b_512.pt
+    scale_min: 1e-3
+    scale_max: 10.0
+    baseline_epsilon: 1e-6
+    min_pred_baseline: 1e-2
+    invalid_pose_mode: identity
+    fixed_near: 0.01
+    fixed_far: 100.0

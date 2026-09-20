@@ -1,0 +1,119 @@
+# @package _global_
+
+# Motion-supervised C4G on the DAVIS-intrinsics 4-dataset mix, trained from
+# scratch (Gaussian head init only). Same base recipe as the July 45k reference
+# (exp_intrinsic_test_davisK_no_cube_l40s_spring_allfalse_egoexo_mono_45k: MoGe
+# ssi depth/normal losses, lr 1e-5, backbone 0.01x, 45k steps) with:
+#   - GT 3D scene flow + 2D flow + static-anchor losses on the per-timestamp
+#     Gaussians (src/loss/loss_motion.py), on top of the CoWTracker tracking loss
+#   - kubric ships GT depth / flow / dynamic masks, spring the preprocessed GT
+#     maps (rigidmap as its photometric mask), egoexo gets online RAFT + MoGe
+#     pseudo-GT, re10k is all-static
+#   - dataset mix 0.35 kubric / 0.30 egoexo / 0.25 re10k / 0.10 spring, spring
+#     scenes drawn by window count, egoexo takes by sqrt window count
+#   - egoexo frame_stride 3 (context 6 frames apart, targets in between)
+
+defaults:
+  - /dataset@_group_.kubric: kubric
+  - /dataset@_group_.spring: spring
+  - /dataset@_group_.egoexo4d_mono: egoexo4d_mono
+  - /dataset@_group_.re10k: re10k
+  - override /model/encoder: vggt
+  - override /model/encoder/backbone: vggt_multi
+  - override /loss: [dynamicmask, lpips]
+
+wandb:
+  name: motion_davisK_all_45k
+  tags: [all, kubric, spring, egoexo4d_mono, re10k, vggt, dynamicmask, davisK, motion, flow3d, static_anchor]
+
+force_davis_intrinsics: true
+
+model:
+  encoder:
+    pretrained_weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/C3G/pretrained_weights/gaussian_decoder.ckpt
+
+dataset:
+  kubric:
+    sample_weight: 0.35
+    motion_fields: true
+    motion_instance_threshold: 0.02
+    photometric_mask: false
+    view_sampler:
+      warm_up_steps: 37500
+  spring:
+    sample_weight: 0.10
+    motion_root: /music-3d-shared-disk/user/KAIST/MG/preprocessing/spring_motion_224
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      gap: 2
+      initial_gap: 2
+      warm_up_steps: 37500
+    different_time: true
+    relative_time: false
+  egoexo4d_mono:
+    sample_weight: 0.30
+    frame_stride: 3
+    item_weighting: sqrt
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+  re10k:
+    sample_weight: 0.25
+    static_motion_mask: true
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+
+optimizer:
+  lr: 1e-5
+  warm_up_steps: 1000
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+
+train:
+  context_view_loss: true
+  reproj_model: moge
+  depth_supervision_mode: ssi
+  depth_loss: 1e-3
+  normal_loss: 1e-3
+  tracking_consistency_loss: 0.1
+  # Weights: the terms are Huber losses on errors normalised by the batch scene
+  # scale (huber_rel) / image size (huber_2d_rel), so their raw magnitude is
+  # ~delta * error. Smoke run at init (davisK C3G head): kubric flow3d ~5e-5,
+  # static ~2e-4, flow2d ~1e-5, total loss ~0.1 -> these weights put the motion
+  # terms at roughly 10-15% of the total early on.
+  motion:
+    flow3d_weight: 100.0
+    flow2d_weight: 20.0
+    static_weight: 50.0
+    start_step: 1000
+    ramp_steps: 1000
+    visibility_rel_tol: 0.1
+    huber_rel: 0.005
+    huber_2d_rel: 0.01
+    mask_dilation: 3
+    detach_anchor: false
+    flow3d_dataset_weights:
+      egoexo4d_mono: 0.3
+    online_pseudo_gt: true
+    online_pseudo_gt_datasets: [egoexo4d_mono]
+    static_camera_only_datasets: [spring]
+    online_flow_threshold: 0.5
+    online_fb_threshold: 1.0
+    online_raft_iters: 12
+    min_tokens: 32
+
+trainer:
+  max_steps: 45000
+  val_check_interval: 500
+  accumulate_grad_batches: 1
+
+checkpointing:
+  every_n_train_steps: 1000
+  save_last: true

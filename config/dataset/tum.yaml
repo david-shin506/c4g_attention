@@ -1,0 +1,22 @@
+defaults:
+  - base_dataset
+  - view_sampler: uniform
+
+name: tum
+roots: [/music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/datasets/TUM/train]
+
+input_image_shape: [224, 224]
+original_image_shape: [480, 640]
+cameras_are_circular: false
+num_frames: 1000
+test_target_mode: dense
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 100.0
+make_baseline_1: true
+
+view_sampler:
+  warm_up_steps: 5000
+  initial_gap: 2
+  gap: 4

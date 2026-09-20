@@ -1,0 +1,1 @@
+Copied from /music-3d-shared-disk/user/KAIST/MG/HG/c4g_mg_new/submodules/diff_gaussian_rasterization_w_feature_detach on 2026-09-13. Original license retained. Semantic channels changed from 1024 to 16; unique CUDA extension name and absolute source paths. Geometry gradients from feature rendering remain detached as in source.

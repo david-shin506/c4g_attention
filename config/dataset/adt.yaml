@@ -1,0 +1,27 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: adt
+roots: [/music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/datasets/ADT/eval/]
+scenes:
+  - Apartment_release_multiuser_cook_seq141_M1292
+  - Apartment_release_multiskeleton_party_seq114_M1292
+  - Apartment_release_meal_skeleton_seq135_M1292
+  - Apartment_release_work_skeleton_seq137_M1292
+
+input_image_shape: [224, 224]
+original_image_shape: [1000, 1000]
+cameras_are_circular: false
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 100.0
+make_baseline_1: true
+
+num_frames: 300
+num_context_frames: 32
+gap: 0
+max_temporal: 300
+num_target_frames: null
+rectified_subdir: synthetic_video/camera-rgb-rectified-600-h1000

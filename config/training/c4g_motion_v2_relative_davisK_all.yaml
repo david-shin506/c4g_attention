@@ -1,0 +1,17 @@
+# @package _global_
+
+# Time-embedding ablation of c4g_motion_v2_davisK_all: v4-3 relative offsets (t - target, index units)
+# with sinusoid period 100 instead of target_1 / period 10000. Evaluate with *_vggt_v43 configs.
+
+defaults:
+  - c4g_motion_v2_davisK_all
+  - _self_
+
+wandb:
+  name: motion_v2_relative_p100_davisK_all_20k
+  tags: [all, kubric, spring, egoexo4d_mono, re10k, vggt, dynamicmask, davisK, motion_v2, flow3d_split, relative_p100]
+
+model:
+  encoder:
+    normalize_type: relative
+    sinusoidal_period: 100

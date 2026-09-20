@@ -1,0 +1,27 @@
+defaults:
+  - base_dataset
+  - view_sampler: bounded
+
+name: nvidia
+roots: [/music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/datasets/nvidia/nvidia/]
+scenes:
+  - Balloon1
+  - Balloon2
+  - Jumping
+  - Playground
+  - Skating
+  - Truck
+  - Umbrella
+
+input_image_shape: [224, 224]
+original_image_shape: [540, 960]
+cameras_are_circular: false
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 100.0
+make_baseline_1: true
+
+num_context_views: 8
+gap: 0
+use_original_size: true

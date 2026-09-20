@@ -1,0 +1,23 @@
+defaults:
+  - base_dataset
+  - view_sampler: uniform
+
+name: egoexo4d
+roots: [/music-3d-shared-disk/dataset/EgoExo4D/original]
+
+input_image_shape: [224, 224]
+original_image_shape: [448, 796]
+cameras_are_circular: false
+
+baseline_min: 1e-3
+baseline_max: 1e10
+max_fov: 100.0
+
+view_drop_prob: 0.3
+min_views_per_timestamp: 2
+frame_stride: 10
+
+view_sampler:
+  warm_up_steps: 5000
+  initial_gap: 2
+  gap: 6

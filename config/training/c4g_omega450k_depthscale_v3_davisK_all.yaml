@@ -1,0 +1,135 @@
+# @package _global_
+
+# v3 (2026-09-09): same as v2 but the Omega normalizer takes its scene scale
+# from the median ratio Omega dense depth / GT depth (spring: stereo
+# disparity, kubric: depth tiffs) instead of the camera-baseline ratio.
+# The depth ratio is defined for static cameras (no identity fallback for
+# the ~70% of spring windows the pose ratio rejected) and its within-scene
+# spread is ~1.1x instead of ~1.4-1.5x. re10k keeps the pose ratio, the
+# static egoexo windows stay identity.
+defaults:
+  - /dataset@_group_.kubric: kubric
+  - /dataset@_group_.spring: spring
+  - /dataset@_group_.egoexo4d_mono: egoexo4d_mono
+  - /dataset@_group_.re10k: re10k
+  - override /model/encoder: vggt
+  - override /model/encoder/backbone: vggt_omega
+  - override /loss: [dynamicmask, lpips]
+
+wandb:
+  name: intrinsic_test_davisK_omega450k_depthscale_v3_all_45k_4gpu
+  mode: online
+  tags: [all, kubric, spring, egoexo4d_mono, re10k, vggt_omega, omega_pose, omega_pose_v3_depthscale, dynamicmask, track]
+
+force_davis_intrinsics: true
+
+model:
+  encoder:
+    pretrained_weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/intrinsic_test/C4G/pretrained_weights/c3g_omega_epoch6_step450000_gaussian_head.pt
+    backbone_pretrained_weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/intrinsic_test/C4G/pretrained_weights/c3g_omega_epoch6_step450000_backbone.pt
+    input_mean: [0.0, 0.0, 0.0]
+    input_std: [1.0, 1.0, 1.0]
+    timestamp_embedding: true
+    timestamp_embedding_type: sinusoidal
+    sinusoidal_embedding_dim: 256
+    sinusoidal_period: 10000
+    normalize_type: target_1
+    gradient_checkpoint: true
+  decoder:
+    make_scale_invariant: true
+    low_pass_filter: 0.3
+    decrease_lpf_step: 1000
+
+dataset:
+  kubric:
+    make_baseline_1: false
+    depth_views: 4
+    relative_pose: true
+    rescale_to_1cube: false
+    num_temporal_frames: 32
+    num_context_timestamps: 6
+    view_sampler:
+      num_context_views: 10
+      warm_up_steps: 37500
+      initial_gap: 2
+      gap: 6
+  spring:
+    make_baseline_1: false
+    depth_views: 4
+    relative_pose: true
+    different_time: true
+    relative_time: false
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+      initial_gap: 2
+      gap: 2
+  egoexo4d_mono:
+    make_baseline_1: false
+    relative_pose: true
+    frame_stride: 10
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+      initial_gap: 2
+      gap: 2
+  re10k:
+    make_baseline_1: false
+    relative_pose: true
+    fake_time_labels: false
+    view_sampler:
+      num_context_views: 12
+      num_target_views: 11
+      warm_up_steps: 37500
+      min_distance_between_context_views: 45
+      max_distance_between_context_views: 90
+      min_distance_to_context_views: 0
+      initial_min_distance_between_context_views: 25
+      initial_max_distance_between_context_views: 25
+
+optimizer:
+  lr: 1e-5
+  warm_up_steps: 1000
+  backbone_lr_multiplier: 0.01
+
+data_loader:
+  train:
+    batch_size: 1
+    num_workers: 16
+    persistent_workers: true
+
+train:
+  context_view_loss: true
+  reproj_model: moge
+  depth_supervision_mode: ssi
+  depth_loss: 1e-3
+  normal_loss: 1e-3
+  tracking_consistency_loss: 1e-1
+  omega_pose_normalizer:
+    enabled: true
+    weights: /music-3d-shared-disk/user/KAIST/MG/InterpolatedC3G/c4g/intrinsic_test/C3G/pretrained_weights/vggt_omega_1b_512.pt
+    scale_min: 1e-3
+    scale_max: 10.0
+    baseline_epsilon: 1e-6
+    # Omega translation noise floor on static input is ~1e-3..3e-3 (Omega units).
+    min_pred_baseline: 1e-2
+    invalid_pose_mode: identity
+    # Omega depth is ~0.05..2, so these never clip; the rasterizer culls at 0.2*near.
+    fixed_near: 0.01
+    fixed_far: 100.0
+    scale_source: auto
+    depth_min_valid_pixels: 500
+    depth_scale_multiplier: 0.8
+
+trainer:
+  max_steps: 45000
+  val_check_interval: 500
+  accumulate_grad_batches: 1
+
+checkpointing:
+  load: null
+  every_n_train_steps: 1000
+  save_top_k: 1
+  save_weights_only: false
